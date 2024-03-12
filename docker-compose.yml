@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  web:
+    image: blossomlabs/blobscan:latest
+    command: web
+    restart: always
+    # volumes:
+    #   - ./web:/app/apps/web:ro
+    ports:
+      - 3000:3000
+    env_file:
+      - ".env"
+
+  api:
+    image: blossomlabs/blobscan:stable
+    command: api
+    restart: always
+    ports:
+      - 3001:3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+    env_file:
+      - ".env"
+
+  indexer:
+    image: blossomlabs/blobscan-indexer:master
+    restart: always
+    env_file:
+      - ".env"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  db-blobscan:
+    image: postgres:15
+    restart: always
+    command: postgres -c 'max_connections=200'
+    environment:
+      POSTGRES_PASSWORD: 'q3Yt9N7RUj4XL75JbY30ppESkFOvL'
+      POSTGRES_USER: 'blobscan'
+      POSTGRES_DB: 'blobscan'
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5495:5432
+
+  redis_db:
+    image: 'redis:alpine'
+    ports:
+      - 6399:6379
+    command: redis-server
+    volumes:
+      - ./redis-data:/data
+
